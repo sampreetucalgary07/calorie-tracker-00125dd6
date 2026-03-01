@@ -112,3 +112,34 @@ export function setGymCalories(calories: number, date?: Date) {
   all[key] = calories;
   localStorage.setItem(GYM_CALORIES_KEY, JSON.stringify(all));
 }
+
+// --- Targets ---
+const TARGETS_KEY = "caltrack_targets";
+
+export interface CalorieTargets {
+  calorieTarget: number;
+  deficitTarget: number;
+}
+
+export function getTargets(): CalorieTargets {
+  const stored = localStorage.getItem(TARGETS_KEY);
+  if (stored) return JSON.parse(stored);
+  return { calorieTarget: 2050, deficitTarget: 500 };
+}
+
+export function saveTargets(targets: CalorieTargets) {
+  localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
+}
+
+// --- History helpers ---
+export function getNetCaloriesForDate(date: Date): number {
+  const logs = getDailyLogs(date);
+  const consumed = logs.reduce((s, l) => s + l.caloriesPerUnit * l.quantity, 0);
+  const gym = getGymCalories(date);
+  return consumed - gym;
+}
+
+export function hasLogsForDate(date: Date): boolean {
+  const logs = getDailyLogs(date);
+  return logs.length > 0;
+}

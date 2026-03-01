@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { CalorieSummary } from "@/components/CalorieSummary";
+import { CalorieTargets } from "@/components/CalorieTargets";
+import { MonthlyCalendar } from "@/components/MonthlyCalendar";
 import { FoodLogList } from "@/components/FoodLogList";
 import { FoodSearch } from "@/components/FoodSearch";
 import { GymCaloriesInput } from "@/components/GymCaloriesInput";
@@ -14,11 +16,13 @@ const Index = () => {
     gymCalories,
     totalConsumed,
     netCalories,
+    targets,
     addFood,
     logFood,
     decrement,
     remove,
     updateGymCalories,
+    updateTargets,
   } = useTracker();
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -47,6 +51,9 @@ const Index = () => {
         <h1 className="text-2xl font-display font-bold text-foreground mt-1">CalTrack</h1>
       </header>
 
+      {/* Calorie & Deficit Targets */}
+      <CalorieTargets targets={targets} onUpdate={updateTargets} />
+
       {/* Calorie Summary */}
       <CalorieSummary
         totalConsumed={totalConsumed}
@@ -61,6 +68,9 @@ const Index = () => {
       <div className="px-4 mt-4">
         <MacroBar logs={dailyLogs} />
       </div>
+
+      {/* Monthly Calendar */}
+      <MonthlyCalendar targets={targets} />
 
       {/* Food Log */}
       <div className="mt-6">
