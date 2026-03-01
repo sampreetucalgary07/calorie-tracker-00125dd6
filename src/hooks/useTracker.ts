@@ -9,12 +9,16 @@ import {
   removeLog,
   getGymCalories,
   setGymCalories as saveGymCalories,
+  getTargets,
+  saveTargets,
+  CalorieTargets,
 } from "@/lib/storage";
 
 export function useTracker() {
   const [foodLibrary, setFoodLibrary] = useState<FoodItem[]>(getFoodLibrary);
   const [dailyLogs, setDailyLogs] = useState<DailyLogEntry[]>(getDailyLogs);
   const [gymCalories, setGymCaloriesState] = useState<number>(getGymCalories);
+  const [targets, setTargetsState] = useState<CalorieTargets>(getTargets);
 
   const addFood = useCallback((food: Omit<FoodItem, "id">) => {
     const newFood = addFoodToLibrary(food);
@@ -40,6 +44,11 @@ export function useTracker() {
   const updateGymCalories = useCallback((cal: number) => {
     saveGymCalories(cal);
     setGymCaloriesState(cal);
+  }, []);
+
+  const updateTargets = useCallback((t: CalorieTargets) => {
+    saveTargets(t);
+    setTargetsState(t);
   }, []);
 
   const totalConsumed = useMemo(
@@ -73,10 +82,12 @@ export function useTracker() {
     totalCarbs,
     totalFat,
     netCalories,
+    targets,
     addFood,
     logFood,
     decrement,
     remove,
     updateGymCalories,
+    updateTargets,
   };
 }
