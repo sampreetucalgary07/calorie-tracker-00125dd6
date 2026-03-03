@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, X } from "lucide-react";
+import { Search, Plus, X, Camera } from "lucide-react";
 import { FoodItem } from "@/types/tracker";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ interface FoodSearchProps {
 export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClose }: FoodSearchProps) {
   const [query, setQuery] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return foodLibrary.slice(0, 20);
@@ -36,6 +37,17 @@ export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClo
     setQuery("");
   };
 
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      toast("AI Vision coming soon!", {
+        description: "In the future, this will automatically detect calories and macros from your food photos.",
+        icon: "🤖"
+      });
+      // Reset input so it can be clicked again
+      e.target.value = "";
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -55,13 +67,28 @@ export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClo
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search foods..."
-                className="bg-transparent border-none outline-none text-foreground font-body text-base flex-1 placeholder:text-muted-foreground"
+                className="bg-transparent border-none outline-none text-foreground font-body text-base flex-1 placeholder:text-muted-foreground min-w-0"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="text-muted-foreground">
+                <button onClick={() => setQuery("")} className="text-muted-foreground mr-1">
                   <X className="w-4 h-4" />
                 </button>
               )}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleCameraCapture}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-primary hover:text-primary/80 transition-colors p-1"
+                title="Scan food with AI"
+              >
+                <Camera className="w-5 h-5" />
+              </button>
             </div>
             <button
               onClick={onClose}

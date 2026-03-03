@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
-import { getNetCaloriesForDate, hasLogsForDate, CalorieTargets } from "@/lib/storage";
+import { getNetCaloriesForDate, CalorieTargets, getDailyLogs } from "@/lib/storage";
 
 interface MonthlyCalendarProps {
   targets: CalorieTargets;
+}
+
+interface DayData {
+  day: number;
+  status: "green" | "orange" | "red" | "none" | "future";
+  macros?: { p: number; c: number; f: number };
 }
 
 export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
@@ -13,7 +19,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
   const monthName = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const [days, setDays] = useState<{ day: number; status: "green" | "orange" | "red" | "none" | "future" }[]>([]);
+  const [days, setDays] = useState<DayData[]>([]);
 
   useEffect(() => {
     const generateCalendar = async () => {
@@ -21,7 +27,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const goalCal = targets.calorieTarget - targets.deficitTarget;
 
-      const result: { day: number; status: "green" | "orange" | "red" | "none" | "future" }[] = [];
+      const result: DayData[] = [];
 
       // Padding for first week
       for (let i = 0; i < firstDay; i++) {
@@ -35,8 +41,8 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
           continue;
         }
 
-        const hasLogs = await hasLogsForDate(date);
-        if (!hasLogs) {
+        const logs = await getDailyLogs(date);
+        if (logs.length === 0) {
           result.push({ day: d, status: d === today.getDate() ? "future" : "none" });
           continue;
         }
@@ -44,13 +50,20 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
         const net = await getNetCaloriesForDate(date);
         const diff = net - goalCal;
 
-        if (diff <= 0) {
-          result.push({ day: d, status: "green" });
-        } else if (diff <= 200) {
-          result.push({ day: d, status: "orange" });
-        } else {
-          result.push({ day: d, status: "red" });
-        }
+        const macros = logs.reduce(
+          (acc, l) => ({
+            p: acc.p + l.proteinPerUnit * l.quantity,
+            c: acc.c + l.carbsPerUnit * l.quantity,
+            f: acc.f + l.fatPerUnit * l.quantity,
+          }),
+          { p: 0, c: 0, f: 0 }
+        );
+
+        let status: "green" | "orange" | "red" = "green";
+        if (diff > 200) status = "red";
+        else if (diff > 0) status = "orange";
+
+        result.push({ day: d, status, macros });
       }
       setDays(result);
     };
@@ -96,9 +109,16 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
             return (
               <div
                 key={i}
-                className={`aspect-square flex items-center justify-center text-xs font-body rounded-md border border-transparent ${statusClasses[d.status]} ${isToday ? "ring-1 ring-primary font-semibold" : ""}`}
+                className={`aspect-[4/5] flex flex-col items-center justify-center rounded-md border border-transparent ${statusClasses[d.status]} ${isToday ? "ring-1 ring-primary font-semibold" : ""}`}
               >
-                {d.day}
+                <span className={`text-xs font-body leading-none ${d.macros ? 'mt-1 mb-1' : ''}`}>{d.day}</span>
+                {d.macros && (
+                  <div className="flex flex-col gap-[2px] items-center opacity-90 mt-0.5 pb-1">
+                    <span className="text-[8px] leading-[9px] font-display text-emerald-300">P: {Math.round(d.macros.p)}g</span>
+                    <span className="text-[8px] leading-[9px] font-display text-blue-300">C: {Math.round(d.macros.c)}g</span>
+                    <span className="text-[8px] leading-[9px] font-display text-amber-300">F: {Math.round(d.macros.f)}g</span>
+                  </div>
+                )}
               </div>
             );
           })}
