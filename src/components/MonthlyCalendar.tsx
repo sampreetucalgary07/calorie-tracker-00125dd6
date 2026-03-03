@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getNetCaloriesForDate, CalorieTargets, getDailyLogs } from "@/lib/storage";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface MonthlyCalendarProps {
   targets: CalorieTargets;
@@ -13,13 +14,29 @@ interface DayData {
 
 export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
 
-  const monthName = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  // State to track the currently viewed month
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const monthName = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
 
   const [days, setDays] = useState<DayData[]>([]);
+
+  const handlePrevMonth = () => {
+    if (year === 2026 && month === 1) return; // Limit to Feb 2026
+    setViewDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    if (year === today.getFullYear() && month === today.getMonth()) return;
+    setViewDate(new Date(year, month + 1, 1));
+  };
+
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
 
   useEffect(() => {
     const generateCalendar = async () => {
@@ -43,7 +60,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
 
         const logs = await getDailyLogs(date);
         if (logs.length === 0) {
-          result.push({ day: d, status: d === today.getDate() ? "future" : "none" });
+          result.push({ day: d, status: date.toDateString() === today.toDateString() ? "future" : "none" });
           continue;
         }
 
@@ -69,7 +86,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
     };
 
     generateCalendar();
-  }, [year, month, today.getDate(), targets.calorieTarget, targets.deficitTarget]);
+  }, [year, month, today.toDateString(), targets.calorieTarget, targets.deficitTarget]);
 
   const goalCal = targets.calorieTarget - targets.deficitTarget;
 
@@ -77,7 +94,23 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
     <div className="px-4 mt-5">
       <div className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-body text-muted-foreground uppercase tracking-widest">{monthName}</h3>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handlePrevMonth}
+              disabled={year === 2026 && month === 1}
+              className="p-1 hover:bg-secondary rounded-md text-muted-foreground transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <h3 className="text-sm font-body text-primary uppercase tracking-widest min-w-[110px] text-center">{monthName}</h3>
+            <button
+              onClick={handleNextMonth}
+              disabled={isCurrentMonth}
+              className="p-1 hover:bg-secondary rounded-md text-muted-foreground transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
           <p className="text-[10px] text-muted-foreground font-body">
             Goal: <span className="text-primary font-semibold">{goalCal} cal/day</span>
           </p>
@@ -97,7 +130,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
           {days.map((d, i) => {
             if (d.day === 0) return <div key={i} />;
 
-            const isToday = d.day === today.getDate();
+            const isToday = d.day === today.getDate() && isCurrentMonth;
             const statusClasses = {
               green: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
               orange: "bg-amber-500/20 text-amber-400 border-amber-500/30",

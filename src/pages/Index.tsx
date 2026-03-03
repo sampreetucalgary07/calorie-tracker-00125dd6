@@ -9,10 +9,11 @@ import { FoodSearch } from "@/components/FoodSearch";
 import { GymCaloriesInput } from "@/components/GymCaloriesInput";
 import { useTracker } from "@/hooks/useTracker";
 import { FoodItem } from "@/types/tracker";
-import { getNetCaloriesForDate, hasLogsForDate } from "@/lib/storage";
+import { getNetCaloriesForDate, hasLogsForDate, addOrIncrementLog } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { toast } from "sonner";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -156,7 +157,7 @@ const CalorieTrackerApp = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Motivational Banner */}
-      <div className="bg-primary/10 text-primary text-center p-2 text-xs font-body border-b border-primary/20">
+      <div className="bg-primary/10 text-primary text-center p-2 text-xs font-body border-b border-primary/20 safe-top">
         {currentStreak > 0 ? (
           <p>
             <strong>🎉 {currentStreak} day streak!</strong> "It's going great! Keep up the momentum."

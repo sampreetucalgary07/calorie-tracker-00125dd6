@@ -79,4 +79,7 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
+  .safe-top {
+    padding-top: calc(env(safe-area-inset-top, 44px) + 16px);
+  }
 }
