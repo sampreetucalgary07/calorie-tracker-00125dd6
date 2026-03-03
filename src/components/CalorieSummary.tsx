@@ -5,9 +5,12 @@ interface CalorieSummaryProps {
   totalConsumed: number;
   gymCalories: number;
   netCalories: number;
+  goal?: number;
 }
 
-export function CalorieSummary({ totalConsumed, gymCalories, netCalories }: CalorieSummaryProps) {
+export function CalorieSummary({ totalConsumed, gymCalories, netCalories, goal = 1550 }: CalorieSummaryProps) {
+  const isOverGoal = netCalories > goal;
+
   return (
     <div className="px-4 pt-6 pb-2">
       {/* Net Calories Hero */}
@@ -22,7 +25,7 @@ export function CalorieSummary({ totalConsumed, gymCalories, netCalories }: Calo
         </p>
         <motion.p
           key={netCalories}
-          className="text-6xl font-display font-bold text-primary neon-text-strong"
+          className={`text-6xl font-display font-bold ${isOverGoal ? "text-red-500" : "text-primary"} neon-text-strong`}
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 300 }}

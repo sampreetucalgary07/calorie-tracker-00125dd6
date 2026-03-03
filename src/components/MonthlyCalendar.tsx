@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { getNetCaloriesForDate, hasLogsForDate, CalorieTargets } from "@/lib/storage";
 
 interface MonthlyCalendarProps {
@@ -13,46 +13,49 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
   const monthName = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const days = useMemo(() => {
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const goalCal = targets.calorieTarget - targets.deficitTarget;
+  const [days, setDays] = useState<{ day: number; status: "green" | "orange" | "red" | "none" | "future" }[]>([]);
 
-    const result: { day: number; status: "green" | "orange" | "red" | "none" | "future" }[] = [];
+  useEffect(() => {
+    const generateCalendar = async () => {
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const goalCal = targets.calorieTarget - targets.deficitTarget;
 
-    // Padding for first week
-    for (let i = 0; i < firstDay; i++) {
-      result.push({ day: 0, status: "none" });
-    }
+      const result: { day: number; status: "green" | "orange" | "red" | "none" | "future" }[] = [];
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(year, month, d);
-      if (date > today) {
-        result.push({ day: d, status: "future" });
-        continue;
+      // Padding for first week
+      for (let i = 0; i < firstDay; i++) {
+        result.push({ day: 0, status: "none" });
       }
 
-      if (!hasLogsForDate(date)) {
-        result.push({ day: d, status: d === today.getDate() ? "future" : "none" });
-        continue;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, month, d);
+        if (date > today) {
+          result.push({ day: d, status: "future" });
+          continue;
+        }
+
+        const hasLogs = await hasLogsForDate(date);
+        if (!hasLogs) {
+          result.push({ day: d, status: d === today.getDate() ? "future" : "none" });
+          continue;
+        }
+
+        const net = await getNetCaloriesForDate(date);
+        const diff = net - goalCal;
+
+        if (diff <= 0) {
+          result.push({ day: d, status: "green" });
+        } else if (diff <= 200) {
+          result.push({ day: d, status: "orange" });
+        } else {
+          result.push({ day: d, status: "red" });
+        }
       }
+      setDays(result);
+    };
 
-      const net = getNetCaloriesForDate(date);
-      const diff = net - goalCal;
-
-      if (diff <= 0) {
-        // At or under goal
-        result.push({ day: d, status: "green" });
-      } else if (diff <= 200) {
-        // Missed by up to 200
-        result.push({ day: d, status: "orange" });
-      } else {
-        // Missed by more than 200
-        result.push({ day: d, status: "red" });
-      }
-    }
-
-    return result;
+    generateCalendar();
   }, [year, month, today.getDate(), targets.calorieTarget, targets.deficitTarget]);
 
   const goalCal = targets.calorieTarget - targets.deficitTarget;

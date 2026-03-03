@@ -1,35 +1,35 @@
 import { FoodItem, DailyLogEntry } from "@/types/tracker";
+import { supabase } from "./supabase";
 
 const FOOD_LIBRARY_KEY = "caltrack_food_library";
 const DAILY_LOGS_KEY = "caltrack_daily_logs";
 
 const DEFAULT_FOODS: FoodItem[] = [
-  { id: "1", name: "Chicken Breast", calories: 165, carbs: 0, protein: 31, fat: 4, sugar: 0 },
-  { id: "2", name: "Brown Rice (1 cup)", calories: 216, carbs: 45, protein: 5, fat: 2, sugar: 0 },
-  { id: "3", name: "Banana", calories: 105, carbs: 27, protein: 1, fat: 0, sugar: 14 },
-  { id: "4", name: "Egg", calories: 78, carbs: 1, protein: 6, fat: 5, sugar: 0 },
-  { id: "5", name: "Greek Yogurt", calories: 100, carbs: 6, protein: 17, fat: 1, sugar: 4 },
-  { id: "6", name: "Oatmeal (1 cup)", calories: 154, carbs: 27, protein: 6, fat: 3, sugar: 1 },
-  { id: "7", name: "Salmon Fillet", calories: 208, carbs: 0, protein: 20, fat: 13, sugar: 0 },
-  { id: "8", name: "Apple", calories: 95, carbs: 25, protein: 0, fat: 0, sugar: 19 },
-  { id: "9", name: "Almonds (1oz)", calories: 164, carbs: 6, protein: 6, fat: 14, sugar: 1 },
-  { id: "10", name: "Sweet Potato", calories: 103, carbs: 24, protein: 2, fat: 0, sugar: 7 },
-  { id: "11", name: "Avocado (half)", calories: 120, carbs: 6, protein: 2, fat: 11, sugar: 0 },
-  { id: "12", name: "Protein Shake", calories: 130, carbs: 3, protein: 25, fat: 2, sugar: 1 },
+  // Banana is now just a default if the library is empty.
+  // It will be added with a proper UUID by the DB.
 ];
 
-export function getFoodLibrary(): FoodItem[] {
-  const stored = localStorage.getItem(FOOD_LIBRARY_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(FOOD_LIBRARY_KEY, JSON.stringify(DEFAULT_FOODS));
-  return DEFAULT_FOODS;
+const getUserId = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  return session.user.id;
+};
+
+export async function getFoodLibrary(): Promise<FoodItem[]> {
+  const userId = await getUserId();
+  const { data, error } = await supabase.from("food_library").select("*").eq("user_id", userId);
+  if (error) throw error;
+  return data;
 }
 
-export function addFoodToLibrary(food: Omit<FoodItem, "id">): FoodItem {
-  const library = getFoodLibrary();
-  const newFood: FoodItem = { ...food, id: crypto.randomUUID() };
-  library.push(newFood);
-  localStorage.setItem(FOOD_LIBRARY_KEY, JSON.stringify(library));
+export async function addFoodToLibrary(food: Omit<FoodItem, "id">): Promise<FoodItem> {
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from("food_library")
+    .insert({ ...food, user_id: userId })
+    .select();
+  if (error) throw error;
+  const newFood = data[0];
   return newFood;
 }
 
@@ -38,29 +38,28 @@ function getDateKey(date?: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-export function getDailyLogs(date?: Date): DailyLogEntry[] {
+export async function getDailyLogs(date?: Date): Promise<DailyLogEntry[]> {
   const key = getDateKey(date);
-  const stored = localStorage.getItem(DAILY_LOGS_KEY);
-  const all: Record<string, DailyLogEntry[]> = stored ? JSON.parse(stored) : {};
-  return all[key] || [];
+  const userId = await getUserId();
+  const { data, error } = await supabase.from("daily_logs").select("*").eq("user_id", userId).eq("date", key);
+  if (error) throw error;
+  return data || [];
 }
 
-function saveDailyLogs(logs: DailyLogEntry[], date?: Date) {
-  const key = getDateKey(date);
-  const stored = localStorage.getItem(DAILY_LOGS_KEY);
-  const all: Record<string, DailyLogEntry[]> = stored ? JSON.parse(stored) : {};
-  all[key] = logs;
-  localStorage.setItem(DAILY_LOGS_KEY, JSON.stringify(all));
-}
-
-export function addOrIncrementLog(food: FoodItem, date?: Date): DailyLogEntry[] {
-  const logs = getDailyLogs(date);
+export async function addOrIncrementLog(food: FoodItem, date?: Date): Promise<DailyLogEntry[]> {
+  const userId = await getUserId();
+  const logs = await getDailyLogs(date);
   const existing = logs.find((l) => l.foodId === food.id);
+
   if (existing) {
-    existing.quantity += 1;
+    const { error } = await supabase
+      .from("daily_logs")
+      .update({ quantity: existing.quantity + 1 })
+      .match({ id: existing.id });
+    if (error) throw error;
   } else {
-    logs.push({
-      id: crypto.randomUUID(),
+    const newLog = {
+      user_id: userId,
       foodId: food.id,
       foodName: food.name,
       caloriesPerUnit: food.calories,
@@ -70,76 +69,88 @@ export function addOrIncrementLog(food: FoodItem, date?: Date): DailyLogEntry[] 
       sugarPerUnit: food.sugar,
       quantity: 1,
       date: getDateKey(date),
-    });
+    };
+    const { error } = await supabase.from("daily_logs").insert(newLog);
+    if (error) throw error;
   }
-  saveDailyLogs(logs, date);
-  return logs;
+
+  return getDailyLogs(date);
 }
 
-export function decrementLog(logId: string, date?: Date): DailyLogEntry[] {
-  let logs = getDailyLogs(date);
+export async function decrementLog(logId: string, date?: Date): Promise<DailyLogEntry[]> {
+  let logs = await getDailyLogs(date);
   const entry = logs.find((l) => l.id === logId);
   if (entry) {
-    entry.quantity -= 1;
-    if (entry.quantity <= 0) {
-      logs = logs.filter((l) => l.id !== logId);
+    if (entry.quantity <= 1) {
+      await removeLog(logId, date);
+    } else {
+      await supabase.from("daily_logs").update({ quantity: entry.quantity - 1 }).match({ id: logId });
     }
   }
-  saveDailyLogs(logs, date);
-  return logs;
+  return getDailyLogs(date);
 }
 
-export function removeLog(logId: string, date?: Date): DailyLogEntry[] {
-  let logs = getDailyLogs(date);
-  logs = logs.filter((l) => l.id !== logId);
-  saveDailyLogs(logs, date);
-  return logs;
+export async function removeLog(logId: string, date?: Date): Promise<DailyLogEntry[]> {
+  await supabase.from("daily_logs").delete().match({ id: logId });
+  return getDailyLogs(date);
 }
 
-const GYM_CALORIES_KEY = "caltrack_gym_calories";
-
-export function getGymCalories(date?: Date): number {
+export async function getGymCalories(date?: Date): Promise<number> {
   const key = getDateKey(date);
-  const stored = localStorage.getItem(GYM_CALORIES_KEY);
-  const all: Record<string, number> = stored ? JSON.parse(stored) : {};
-  return all[key] || 0;
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from("daily_gym_calories")
+    .select("calories")
+    .eq("user_id", userId)
+    .eq("date", key)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error; // Ignore "range not found"
+  return data?.calories || 0;
 }
 
-export function setGymCalories(calories: number, date?: Date) {
+export async function setGymCalories(calories: number, date?: Date) {
   const key = getDateKey(date);
-  const stored = localStorage.getItem(GYM_CALORIES_KEY);
-  const all: Record<string, number> = stored ? JSON.parse(stored) : {};
-  all[key] = calories;
-  localStorage.setItem(GYM_CALORIES_KEY, JSON.stringify(all));
+  const userId = await getUserId();
+  const { error } = await supabase.from("daily_gym_calories").upsert({
+    user_id: userId,
+    date: key,
+    calories,
+  });
+  if (error) throw error;
 }
 
 // --- Targets ---
-const TARGETS_KEY = "caltrack_targets";
-
 export interface CalorieTargets {
   calorieTarget: number;
   deficitTarget: number;
 }
 
-export function getTargets(): CalorieTargets {
-  const stored = localStorage.getItem(TARGETS_KEY);
-  if (stored) return JSON.parse(stored);
-  return { calorieTarget: 2050, deficitTarget: 500 };
+export async function getTargets(): Promise<CalorieTargets> {
+  const userId = await getUserId();
+  const { data, error } = await supabase.from("profiles").select("calorie_target, deficit_target").eq("id", userId).single();
+  if (error && error.code !== "PGRST116") { // Also ignore if profile doesn't exist yet
+    // This can happen for a new user. Return default targets.
+    return { calorieTarget: 2050, deficitTarget: 500 };
+  }
+  return { calorieTarget: data?.calorie_target || 2050, deficitTarget: data?.deficit_target || 500 };
 }
 
-export function saveTargets(targets: CalorieTargets) {
-  localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
+export async function saveTargets(targets: CalorieTargets) {
+  const userId = await getUserId();
+  const { error } = await supabase.from("profiles").update({ calorie_target: targets.calorieTarget, deficit_target: targets.deficitTarget }).eq("id", userId);
+  if (error) throw error;
 }
 
 // --- History helpers ---
-export function getNetCaloriesForDate(date: Date): number {
-  const logs = getDailyLogs(date);
+export async function getNetCaloriesForDate(date: Date): Promise<number> {
+  const logs = await getDailyLogs(date);
   const consumed = logs.reduce((s, l) => s + l.caloriesPerUnit * l.quantity, 0);
-  const gym = getGymCalories(date);
+  const gym = await getGymCalories(date);
   return consumed - gym;
 }
 
-export function hasLogsForDate(date: Date): boolean {
-  const logs = getDailyLogs(date);
+export async function hasLogsForDate(date: Date): Promise<boolean> {
+  const logs = await getDailyLogs(date);
   return logs.length > 0;
 }

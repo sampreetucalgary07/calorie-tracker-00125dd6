@@ -28,7 +28,7 @@ export function GymCaloriesInput({ gymCalories, onUpdate }: GymCaloriesInputProp
         >
           <div className="flex items-center gap-2">
             <Dumbbell className="w-4 h-4 text-blue-400" />
-            <span className="font-body text-sm text-muted-foreground">Gym Calories</span>
+            <span className="font-body text-sm text-muted-foreground">Went to gym? Enter Calories burnt 💪🏼</span>
           </div>
           <span className="font-display font-semibold text-foreground">
             {gymCalories > 0 ? `${gymCalories} cal` : "Tap to set"}
