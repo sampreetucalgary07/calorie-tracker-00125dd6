@@ -1,73 +1,84 @@
-# Welcome to your Lovable project
+# 💪 CalTrack - Personal Calorie & Macro Tracker
 
-## Project info
+CalTrack is a modern, responsive web application designed for personal use to track your daily calorie intake, macronutrients, and gym workouts. It features a stunning UI built with React, Vite, and TailwindCSS, and includes a gamified streak system to keep you motivated.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## ✨ Features
 
-## How can I edit this code?
+- **Daily Logging:** Log foods with calories, protein, carbs, fats, and sugars.
+- **Gym Calories:** Easily deduct calories burned during workouts.
+- **Streak System:** A visual streak counter that only increments when you successfully hit your daily calorie and deficit targets. Includes a "Last Streak" metric for historical comparison.
+- **Macro Visualization:** A dynamic progress bar that shows your daily protein, carb, and fat intake against customizable targets.
+- **Weekly Schedule:** Built-in workout schedule tailored to specific days of the week.
+- **Monthly Calendar Flow:** A visual history calendar showing days where you successfully hit your goals.
+- **Supabase Integration:** Secure cloud storage for your food library, daily logs, and user profile settings.
 
-There are several ways of editing your application.
+## 🛠 Tech Stack
 
-**Use Lovable**
+- **Frontend Framework:** [React 18](https://react.dev/) with [Vite](https://vitejs.dev/)
+- **Language:** TypeScript
+- **Styling:** [TailwindCSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/) components
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Database/Auth:** [Supabase](https://supabase.com/)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🚀 Getting Started Locally
 
-**Use your preferred IDE**
+To run this project on your own machine, you will need Node.js installed.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/calorie-tracker-00125dd6.git
+   cd calorie-tracker-00125dd6
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-Follow these steps:
+3. **Set up Environment Variables:**
+   Create a `.env.local` file in the root of the project and add your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+   VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:8080/` in your browser.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🏗 Database Setup (Supabase)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Because this app uses Supabase as its backend, you must configure your database tables before the app will work.
 
-**Edit a file directly in GitHub**
+Follow the instructions and execute the SQL schema provided in the `supabase_schema_guide.md` file (or located in your Supabase SQL editor) to create the required tables:
+- `profiles`
+- `food_library`
+- `daily_logs`
+- `daily_gym_calories`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The SQL script also sets up **Row Level Security (RLS)** to ensure your data is entirely private to your authenticated user account.
 
-**Use GitHub Codespaces**
+### Lock Down Sign Ups (Personal Use Only)
+To prevent strangers from creating accounts on your private tracker:
+1. Create your account through the app's Sign Up screen.
+2. Go to your Supabase Dashboard -> **Authentication** -> **Policies and Configuration** -> **Sign up limits**.
+3. Toggle **"Allow new users to sign up"** to OFF.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🌍 Deployment (Vercel)
 
-This project is built with:
+This application is ready to be deployed for free on [Vercel](https://vercel.com). Deploying allows you to access the tracker from your mobile phone as a Progressive Web App (PWA).
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Push your code to GitHub.
+2. Import the repository into a new Vercel project.
+3. In the Vercel project settings, ensure you add your `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as **Environment Variables**.
+4. Click **Deploy**.
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Once deployed, you can open the Vercel URL on your phone's browser (Safari/Chrome) and use the **"Add to Home Screen"** feature to install it like a native app!
