@@ -43,13 +43,30 @@ export async function getDailyLogs(date?: Date): Promise<DailyLogEntry[]> {
   const userId = await getUserId();
   const { data, error } = await supabase.from("daily_logs").select("*").eq("user_id", userId).eq("date", key);
   if (error) throw error;
-  return data || [];
+
+  if (!data) return [];
+
+  // Map snake_case from DB back to camelCase for the app
+  return data.map((d: any) => ({
+    id: d.id,
+    user_id: d.user_id,
+    date: d.date,
+    foodId: d.food_id,
+    foodName: d.food_name,
+    caloriesPerUnit: d.calories_per_unit,
+    proteinPerUnit: d.protein_per_unit,
+    carbsPerUnit: d.carbs_per_unit,
+    fatPerUnit: d.fat_per_unit,
+    sugarPerUnit: d.sugar_per_unit,
+    quantity: d.quantity,
+  }));
 }
 
 export async function addOrIncrementLog(food: FoodItem, date?: Date): Promise<DailyLogEntry[]> {
   const userId = await getUserId();
   const logs = await getDailyLogs(date);
   const existing = logs.find((l) => l.foodId === food.id);
+
 
   if (existing) {
     const { error } = await supabase
@@ -60,13 +77,13 @@ export async function addOrIncrementLog(food: FoodItem, date?: Date): Promise<Da
   } else {
     const newLog = {
       user_id: userId,
-      foodId: food.id,
-      foodName: food.name,
-      caloriesPerUnit: food.calories,
-      carbsPerUnit: food.carbs,
-      proteinPerUnit: food.protein,
-      fatPerUnit: food.fat,
-      sugarPerUnit: food.sugar,
+      food_id: food.id,
+      food_name: food.name,
+      calories_per_unit: food.calories,
+      carbs_per_unit: food.carbs,
+      protein_per_unit: food.protein,
+      fat_per_unit: food.fat,
+      sugar_per_unit: food.sugar,
       quantity: 1,
       date: getDateKey(date),
     };
