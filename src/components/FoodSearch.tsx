@@ -2,11 +2,12 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, X } from "lucide-react";
 import { FoodItem } from "@/types/tracker";
+import { toast } from "sonner";
 
 interface FoodSearchProps {
   foodLibrary: FoodItem[];
   onSelectFood: (food: FoodItem) => void;
-  onAddFood: (food: Omit<FoodItem, "id">) => FoodItem;
+  onAddFood: (food: Omit<FoodItem, "id">) => Promise<FoodItem> | FoodItem;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -23,12 +24,14 @@ export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClo
 
   const handleSelect = (food: FoodItem) => {
     onSelectFood(food);
+    toast.success(`Logged 1x ${food.name}`);
     setQuery("");
   };
 
-  const handleQuickAdd = (food: Omit<FoodItem, "id">) => {
-    const newFood = onAddFood(food);
+  const handleQuickAdd = async (food: Omit<FoodItem, "id">) => {
+    const newFood = await onAddFood(food);
     onSelectFood(newFood);
+    toast.success(`Added & Logged ${newFood.name}`);
     setShowQuickAdd(false);
     setQuery("");
   };
@@ -48,7 +51,6 @@ export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClo
             <div className="flex-1 flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-3">
               <Search className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <input
-                autoFocus
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
