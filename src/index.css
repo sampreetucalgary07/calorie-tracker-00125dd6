@@ -47,6 +47,7 @@
 
     --neon-glow: 0 0 20px hsl(145 80% 48% / 0.3);
     --neon-glow-strong: 0 0 30px hsl(145 80% 48% / 0.5);
+    --neon-glow-blue: 0 0 30px hsl(217 91% 60% / 0.5);
   }
 }
 
@@ -61,7 +62,12 @@
     touch-action: manipulation;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display;
   }
 }
@@ -70,15 +76,23 @@
   .neon-text {
     text-shadow: var(--neon-glow);
   }
+
   .neon-text-strong {
     text-shadow: var(--neon-glow-strong);
   }
+
+  .neon-text-blue {
+    text-shadow: var(--neon-glow-blue);
+  }
+
   .neon-border {
     box-shadow: var(--neon-glow);
   }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
+
   .safe-top {
     padding-top: calc(env(safe-area-inset-top, 44px) + 16px);
   }

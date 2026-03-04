@@ -23,6 +23,14 @@ const Index = () => {
       setSession(session);
     });
 
+    // Temporary force cleanup of dummy data on hot reload
+    (async () => {
+      console.log("Attempting to force delete test data...");
+      const { data, error } = await supabase.from("daily_logs").delete().eq("foodId", "test").select();
+      if (error) console.error("Force delete failed:", error);
+      else console.log("Force deleted rows:", data?.length);
+    })();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -204,6 +212,7 @@ const CalorieTrackerApp = () => {
         gymCalories={gymCalories}
         netCalories={netCalories}
         goal={targets.calorieTarget - targets.deficitTarget}
+        isUnlogged={dailyLogs.length === 0}
       />
 
       {/* Gym Calories */}

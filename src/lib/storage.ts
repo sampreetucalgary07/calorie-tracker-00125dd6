@@ -35,7 +35,11 @@ export async function addFoodToLibrary(food: Omit<FoodItem, "id">): Promise<Food
 
 function getDateKey(date?: Date): string {
   const d = date || new Date();
-  return d.toISOString().split("T")[0];
+  // Fix timezone shift by formatting local date carefully instead of UTC toISOString()
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export async function getDailyLogs(date?: Date): Promise<DailyLogEntry[]> {
@@ -133,7 +137,7 @@ export async function setGymCalories(calories: number, date?: Date) {
     user_id: userId,
     date: key,
     calories,
-  });
+  }, { onConflict: "user_id,date" });
   if (error) throw error;
 }
 

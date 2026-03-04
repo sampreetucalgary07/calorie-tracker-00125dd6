@@ -11,8 +11,8 @@ export function GymCaloriesInput({ gymCalories, onUpdate }: GymCaloriesInputProp
   const [value, setValue] = useState(String(gymCalories || ""));
 
   const handleSave = () => {
-    const num = parseInt(value) || 0;
-    onUpdate(num);
+    const num = value === "" ? 0 : parseInt(value);
+    onUpdate(isNaN(num) ? 0 : num);
     setIsEditing(false);
   };
 

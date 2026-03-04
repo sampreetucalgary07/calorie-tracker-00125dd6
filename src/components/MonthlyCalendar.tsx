@@ -40,6 +40,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
 
   useEffect(() => {
     const generateCalendar = async () => {
+      setDays([]); // Clear instantly for visual feedback
       const firstDay = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const goalCal = targets.calorieTarget - targets.deficitTarget;
@@ -51,17 +52,21 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
         result.push({ day: 0, status: "none" });
       }
 
-      for (let d = 1; d <= daysInMonth; d++) {
+      // Concurrently fetch all days
+      const dayPromises = Array.from({ length: daysInMonth }, async (_, i): Promise<DayData> => {
+        const d = i + 1;
         const date = new Date(year, month, d);
+
         if (date > today) {
-          result.push({ day: d, status: "future" });
-          continue;
+          return { day: d, status: "future" };
         }
 
         const logs = await getDailyLogs(date);
         if (logs.length === 0) {
-          result.push({ day: d, status: date.toDateString() === today.toDateString() ? "future" : "none" });
-          continue;
+          return {
+            day: d,
+            status: date.toDateString() === today.toDateString() ? "future" : "none"
+          };
         }
 
         const net = await getNetCaloriesForDate(date);
@@ -80,13 +85,16 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
         if (diff > 200) status = "red";
         else if (diff > 0) status = "orange";
 
-        result.push({ day: d, status, macros });
-      }
+        return { day: d, status, macros };
+      });
+
+      const monthDays = await Promise.all(dayPromises);
+      result.push(...monthDays);
       setDays(result);
     };
 
     generateCalendar();
-  }, [year, month, today.toDateString(), targets.calorieTarget, targets.deficitTarget]);
+  }, [year, month, today.toDateString(), targets.calorieTarget, targets.deficitTarget, viewDate]);
 
   const goalCal = targets.calorieTarget - targets.deficitTarget;
 
@@ -136,7 +144,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
               orange: "bg-amber-500/20 text-amber-400 border-amber-500/30",
               red: "bg-red-500/20 text-red-400 border-red-500/30",
               future: "text-muted-foreground/40",
-              none: "text-muted-foreground/60",
+              none: "bg-blue-500/20 text-blue-400 border-blue-500/30",
             };
 
             return (
@@ -145,7 +153,7 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
                 className={`aspect-[4/5] flex flex-col items-center justify-center rounded-md border border-transparent ${statusClasses[d.status]} ${isToday ? "ring-1 ring-primary font-semibold" : ""}`}
               >
                 <span className={`text-xs font-body leading-none ${d.macros ? 'mt-1 mb-1' : ''}`}>{d.day}</span>
-                {d.macros && (
+                {d.macros && (Math.round(d.macros.p) > 0 || Math.round(d.macros.c) > 0 || Math.round(d.macros.f) > 0) && (
                   <div className="flex flex-col gap-[2px] items-center opacity-90 mt-0.5 pb-1">
                     <span className="text-[8px] leading-[9px] font-display text-emerald-300">P: {Math.round(d.macros.p)}g</span>
                     <span className="text-[8px] leading-[9px] font-display text-blue-300">C: {Math.round(d.macros.c)}g</span>
@@ -158,7 +166,10 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mt-3 text-[10px] font-body text-muted-foreground">
+        <div className="flex items-center justify-center gap-3 mt-3 text-[10px] font-body text-muted-foreground flex-wrap">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Unlogged
+          </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> On track
           </span>
