@@ -73,6 +73,7 @@ const CalorieTrackerApp = () => {
     netCalories,
     targets,
     addFood,
+    removeFood,
     logFood,
     decrement,
     remove,
@@ -253,6 +254,7 @@ const CalorieTrackerApp = () => {
         foodLibrary={foodLibrary}
         onSelectFood={handleSelectFood}
         onAddFood={addFood}
+        onRemoveFoodLibrary={removeFood}
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
       />

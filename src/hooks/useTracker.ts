@@ -3,6 +3,7 @@ import { FoodItem, DailyLogEntry } from "@/types/tracker";
 import {
   getFoodLibrary,
   addFoodToLibrary,
+  deleteFoodFromLibrary,
   getDailyLogs,
   addOrIncrementLog,
   decrementLog,
@@ -60,6 +61,11 @@ export function useTracker() {
     setDailyLogs([...updated]);
   }, []);
 
+  const removeFood = useCallback(async (id: string) => {
+    await deleteFoodFromLibrary(id);
+    setFoodLibrary((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
   const remove = useCallback(async (logId: string) => {
     const updated = await removeLog(logId);
     setDailyLogs([...updated]);
@@ -109,6 +115,7 @@ export function useTracker() {
     netCalories,
     targets,
     addFood,
+    removeFood,
     logFood,
     decrement,
     remove,

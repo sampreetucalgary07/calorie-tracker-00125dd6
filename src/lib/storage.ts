@@ -33,6 +33,16 @@ export async function addFoodToLibrary(food: Omit<FoodItem, "id">): Promise<Food
   return newFood;
 }
 
+export async function deleteFoodFromLibrary(id: string): Promise<void> {
+  const userId = await getUserId();
+  const { error } = await supabase
+    .from("food_library")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
 function getDateKey(date?: Date): string {
   const d = date || new Date();
   // Fix timezone shift by formatting local date carefully instead of UTC toISOString()

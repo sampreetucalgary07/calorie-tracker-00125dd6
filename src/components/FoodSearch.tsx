@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, X, Camera } from "lucide-react";
+import { Search, Plus, X, Camera, Trash2 } from "lucide-react";
 import { FoodItem } from "@/types/tracker";
 import { toast } from "sonner";
 
@@ -8,11 +8,12 @@ interface FoodSearchProps {
   foodLibrary: FoodItem[];
   onSelectFood: (food: FoodItem) => void;
   onAddFood: (food: Omit<FoodItem, "id">) => Promise<FoodItem> | FoodItem;
+  onRemoveFoodLibrary: (id: string) => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClose }: FoodSearchProps) {
+export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, onRemoveFoodLibrary, isOpen, onClose }: FoodSearchProps) {
   const [query, setQuery] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,20 +126,36 @@ export function FoodSearch({ foodLibrary, onSelectFood, onAddFood, isOpen, onClo
                   </button>
                 )}
                 {filtered.map((food) => (
-                  <motion.button
-                    key={food.id}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleSelect(food)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg active:bg-secondary/50 transition-colors text-left"
-                  >
-                    <div>
-                      <p className="font-display font-medium text-foreground">{food.name}</p>
-                      <p className="text-xs text-muted-foreground font-body mt-0.5">
-                        P:{food.protein}g · C:{food.carbs}g · F:{food.fat}g
-                      </p>
-                    </div>
-                    <span className="text-primary font-display font-semibold">{food.calories}</span>
-                  </motion.button>
+                  <div key={food.id} className="w-full flex items-center justify-between gap-2 p-1 rounded-lg">
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSelect(food)}
+                      className="flex-1 flex items-center justify-between p-2 rounded-lg active:bg-secondary/50 transition-colors text-left"
+                    >
+                      <div>
+                        <p className="font-display font-medium text-foreground">{food.name}</p>
+                        <p className="text-xs text-muted-foreground font-body mt-0.5">
+                          P:{food.protein}g · C:{food.carbs}g · F:{food.fat}g
+                        </p>
+                      </div>
+                      <span className="text-primary font-display font-semibold mr-2">{food.calories}</span>
+                    </motion.button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Confirm deletion to avoid accidents
+                        if (confirm(`Permanently delete ${food.name} from your library?`)) {
+                          onRemoveFoodLibrary(food.id);
+                          toast.success(`${food.name} deleted.`);
+                        }
+                      }}
+                      className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                      title="Delete food from library"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
