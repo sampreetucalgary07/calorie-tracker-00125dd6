@@ -82,8 +82,8 @@ export function MonthlyCalendar({ targets }: MonthlyCalendarProps) {
         );
 
         let status: "green" | "orange" | "red" = "green";
-        if (diff > 200) status = "red";
-        else if (diff > 0) status = "orange";
+        if (diff > 0) status = "red";
+        else if (diff >= -200) status = "orange";
 
         return { day: d, status, macros };
       });

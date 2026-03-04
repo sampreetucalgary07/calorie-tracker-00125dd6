@@ -10,7 +10,16 @@ interface CalorieSummaryProps {
 }
 
 export function CalorieSummary({ totalConsumed, gymCalories, netCalories, goal = 1550, isUnlogged = false }: CalorieSummaryProps) {
-  const isOverGoal = netCalories > goal;
+  const diff = netCalories - goal;
+
+  let statusColorClass = "text-primary neon-text-strong";
+  if (isUnlogged) {
+    statusColorClass = "text-blue-500 neon-text-blue";
+  } else if (diff > 0) {
+    statusColorClass = "text-red-500 neon-text-strong";
+  } else if (diff >= -200) {
+    statusColorClass = "text-amber-500 neon-text-strong";
+  }
 
   return (
     <div className="px-4 pt-6 pb-2">
@@ -26,12 +35,7 @@ export function CalorieSummary({ totalConsumed, gymCalories, netCalories, goal =
         </p>
         <motion.p
           key={netCalories}
-          className={`text-6xl font-display font-bold ${isUnlogged
-              ? "text-blue-500 neon-text-blue"
-              : isOverGoal
-                ? "text-red-500 neon-text-strong"
-                : "text-primary neon-text-strong"
-            }`}
+          className={`text-6xl font-display font-bold ${statusColorClass}`}
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 300 }}
