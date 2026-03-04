@@ -169,7 +169,11 @@ export async function getTargets(): Promise<CalorieTargets> {
 
 export async function saveTargets(targets: CalorieTargets) {
   const userId = await getUserId();
-  const { error } = await supabase.from("profiles").update({ calorie_target: targets.calorieTarget, deficit_target: targets.deficitTarget }).eq("id", userId);
+  const { error } = await supabase.from("profiles").upsert({
+    id: userId,
+    calorie_target: targets.calorieTarget,
+    deficit_target: targets.deficitTarget
+  }, { onConflict: 'id' });
   if (error) throw error;
 }
 
