@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { FoodItem, DailyLogEntry } from "@/types/tracker";
+import { FoodItem, DailyLogEntry, DailyTask } from "@/types/tracker";
 import {
   getFoodLibrary,
   addFoodToLibrary,
@@ -13,29 +13,36 @@ import {
   getTargets,
   saveTargets,
   CalorieTargets,
+  getTasks,
+  addTask as saveTask,
+  toggleTask as updateTaskStatus,
+  deleteTask as dropTask,
 } from "@/lib/storage";
 
-export function useTracker() {
+export function useTracker(selectedDate: Date = new Date()) {
   const [loading, setLoading] = useState(true);
   const [foodLibrary, setFoodLibrary] = useState<FoodItem[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLogEntry[]>([]);
   const [gymCalories, setGymCaloriesState] = useState<number>(0);
+  const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [targets, setTargetsState] = useState<CalorieTargets>({ calorieTarget: 2050, deficitTarget: 500 });
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [library, logs, gym, userTargets] = await Promise.all([
+        const [library, logs, gym, userTargets, dailyTasks] = await Promise.all([
           getFoodLibrary(),
-          getDailyLogs(),
-          getGymCalories(),
+          getDailyLogs(selectedDate),
+          getGymCalories(selectedDate),
           getTargets(),
+          getTasks(selectedDate),
         ]);
         setFoodLibrary(library);
         setDailyLogs(logs);
         setGymCaloriesState(gym);
         setTargetsState(userTargets);
+        setTasks(dailyTasks);
       } catch (error) {
         console.error("Error fetching initial data:", error);
       } finally {
@@ -43,7 +50,7 @@ export function useTracker() {
       }
     };
     fetchData();
-  }, []);
+  }, [selectedDate.getTime()]);
 
   const addFood = useCallback(async (food: Omit<FoodItem, "id">) => {
     const newFood = await addFoodToLibrary(food);
@@ -52,14 +59,14 @@ export function useTracker() {
   }, []);
 
   const logFood = useCallback(async (food: FoodItem) => {
-    const updated = await addOrIncrementLog(food);
+    const updated = await addOrIncrementLog(food, selectedDate);
     setDailyLogs([...updated]);
-  }, []);
+  }, [selectedDate.getTime()]);
 
   const decrement = useCallback(async (logId: string) => {
-    const updated = await decrementLog(logId);
+    const updated = await decrementLog(logId, selectedDate);
     setDailyLogs([...updated]);
-  }, []);
+  }, [selectedDate.getTime()]);
 
   const removeFood = useCallback(async (id: string) => {
     await deleteFoodFromLibrary(id);
@@ -67,19 +74,38 @@ export function useTracker() {
   }, []);
 
   const remove = useCallback(async (logId: string) => {
-    const updated = await removeLog(logId);
+    const updated = await removeLog(logId, selectedDate);
     setDailyLogs([...updated]);
-  }, []);
+  }, [selectedDate.getTime()]);
 
   const updateGymCalories = useCallback(async (cal: number) => {
-    await saveGymCalories(cal);
+    await saveGymCalories(cal, selectedDate);
     setGymCaloriesState(cal);
-  }, []);
+  }, [selectedDate.getTime()]);
 
   const updateTargets = useCallback(async (t: CalorieTargets) => {
     await saveTargets(t);
     setTargetsState(t);
   }, []);
+
+  const addTask = useCallback(async (
+    content: string, 
+    frequency: "daily" | "weekly" | "biweekly" | "specific_days" = "daily",
+    frequencyConfig?: string[]
+  ) => {
+    const updated = await saveTask(content, frequency, frequencyConfig, selectedDate);
+    setTasks(updated);
+  }, [selectedDate.getTime()]);
+
+  const toggleTask = useCallback(async (id: string, isCompleted: boolean) => {
+    const updated = await updateTaskStatus(id, isCompleted, selectedDate);
+    setTasks(updated);
+  }, [selectedDate.getTime()]);
+
+  const removeTask = useCallback(async (id: string) => {
+    const updated = await dropTask(id, selectedDate);
+    setTasks(updated);
+  }, [selectedDate.getTime()]);
 
   const totalConsumed = useMemo(
     () => dailyLogs.reduce((sum, l) => sum + l.caloriesPerUnit * l.quantity, 0),
@@ -114,6 +140,7 @@ export function useTracker() {
     totalFat,
     netCalories,
     targets,
+    tasks,
     addFood,
     removeFood,
     logFood,
@@ -121,5 +148,8 @@ export function useTracker() {
     remove,
     updateGymCalories,
     updateTargets,
+    addTask,
+    toggleTask,
+    removeTask,
   };
 }

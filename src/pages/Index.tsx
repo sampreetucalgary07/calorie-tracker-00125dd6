@@ -3,10 +3,11 @@ import { Plus, Flame, Loader2 } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
 import { CalorieSummary } from "@/components/CalorieSummary";
 import { CalorieTargets } from "@/components/CalorieTargets";
-import { MonthlyCalendar } from "@/components/MonthlyCalendar";
+import { WeeklyCalendar } from "@/components/WeeklyCalendar";
 import { FoodLogList } from "@/components/FoodLogList";
 import { FoodSearch } from "@/components/FoodSearch";
 import { GymCaloriesInput } from "@/components/GymCaloriesInput";
+import { DailyTasks } from "@/components/DailyTasks";
 import { useTracker } from "@/hooks/useTracker";
 import { FoodItem } from "@/types/tracker";
 import { getNetCaloriesForDate, hasLogsForDate, addOrIncrementLog } from "@/lib/storage";
@@ -64,6 +65,8 @@ const Index = () => {
 };
 
 const CalorieTrackerApp = () => {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
   const {
     loading,
     foodLibrary,
@@ -79,7 +82,11 @@ const CalorieTrackerApp = () => {
     remove,
     updateGymCalories,
     updateTargets,
-  } = useTracker();
+    tasks,
+    addTask,
+    toggleTask,
+    removeTask,
+  } = useTracker(selectedDate);
 
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -136,18 +143,22 @@ const CalorieTrackerApp = () => {
       }
 
       // Check today (if met, add to streak)
-      if (dailyLogs.length > 0) {
-        if (netCalories - goal <= 200) streak++;
+      const hasTodayLogs = await hasLogsForDate(today);
+      if (hasTodayLogs) {
+        const netToday = await getNetCaloriesForDate(today);
+        if (netToday - goal <= 200) streak++;
       }
 
       setCurrentStreak(streak);
       setLastStreak(last);
     };
     if (!loading) calculateStreak();
-  }, [dailyLogs, targets, netCalories, loading]);
+  }, [targets, loading]); // Remove dailyLogs directly since we check all days strictly
 
-  const today = new Date();
-  const dateStr = today.toLocaleDateString("en-US", {
+  const todayStr = new Date().toDateString();
+  const isSelectedToday = selectedDate.toDateString() === todayStr;
+  
+  const dateStr = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",
@@ -182,8 +193,10 @@ const CalorieTrackerApp = () => {
       <header className="px-4 pt-6 pb-2">
         <div className="flex justify-between items-end">
           <div>
-            <p className="text-xs text-muted-foreground font-body uppercase tracking-widest">{dateStr}</p>
-            <h1 className="text-2xl font-display font-bold text-foreground mt-1">CalTrack</h1>
+            <p className="text-xs text-muted-foreground font-body uppercase tracking-widest">
+              {isSelectedToday ? "Today" : "Viewing Past"}
+            </p>
+            <h1 className="text-2xl font-display font-bold text-foreground mt-1">{dateStr}</h1>
           </div>
           <div className="flex gap-4 text-right">
             <div>
@@ -235,8 +248,17 @@ const CalorieTrackerApp = () => {
         />
       </div>
 
-      {/* Monthly Calendar */}
-      <MonthlyCalendar targets={targets} />
+      {/* Weekly Calendar */}
+      <WeeklyCalendar targets={targets} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+
+      {/* Daily Tasks */}
+      <DailyTasks
+        tasks={tasks}
+        date={selectedDate}
+        onAddTask={addTask}
+        onToggleTask={toggleTask}
+        onDeleteTask={removeTask}
+      />
 
       {/* Workout Schedule */}
       <WorkoutSchedule />

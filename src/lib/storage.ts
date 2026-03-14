@@ -1,4 +1,4 @@
-import { FoodItem, DailyLogEntry } from "@/types/tracker";
+import { FoodItem, DailyLogEntry, DailyTask } from "@/types/tracker";
 import { supabase } from "./supabase";
 
 const FOOD_LIBRARY_KEY = "caltrack_food_library";
@@ -149,6 +149,125 @@ export async function setGymCalories(calories: number, date?: Date) {
     calories,
   }, { onConflict: "user_id,date" });
   if (error) throw error;
+}
+
+// --- Daily Tasks (Habits) ---
+export async function getTasks(date?: Date): Promise<DailyTask[]> {
+  const key = getDateKey(date);
+  const userId = await getUserId();
+  
+  // 1. Fetch all global habits for the user
+  const { data: globalTasks, error: tasksError } = await supabase
+    .from("user_tasks")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (tasksError && tasksError.code === "42P01") return []; // Table doesn't exist yet
+  if (tasksError) throw tasksError;
+  if (!globalTasks) return [];
+
+  // 2. Fetch completions for the specific date
+  const { data: completions, error: compError } = await supabase
+    .from("task_completions")
+    .select("task_id")
+    .eq("user_id", userId)
+    .eq("date", key);
+
+  if (compError && compError.code !== "42P01") throw compError;
+  const completedTaskIds = new Set(completions?.map(c => c.task_id) || []);
+
+  return globalTasks
+    .map((t: any) => ({
+      id: t.id,
+      userId: t.user_id,
+      content: t.content,
+      isCompleted: completedTaskIds.has(t.id),
+      frequency: t.frequency,
+      frequencyConfig: t.frequency_config,
+      createdAt: t.created_at,
+    }))
+    .filter((task: DailyTask) => {
+      const targetDate = date || new Date();
+      targetDate.setHours(0, 0, 0, 0);
+
+      const createdDate = new Date(task.createdAt);
+      createdDate.setHours(0, 0, 0, 0);
+
+      // If viewing a date *before* the task was created, hide it
+      if (targetDate < createdDate) return false;
+
+      if (task.frequency === "daily") return true;
+
+      if (task.frequency === "weekly") {
+        return targetDate.getDay() === createdDate.getDay();
+      }
+
+      if (task.frequency === "biweekly") {
+        if (targetDate.getDay() !== createdDate.getDay()) return false;
+        const diffTime = Math.abs(targetDate.getTime() - createdDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // Only show if the difference in weeks is an even number (0, 2, 4...)
+        return (diffDays / 7) % 2 === 0;
+      }
+
+      if (task.frequency === "specific_days" && task.frequencyConfig) {
+        const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+        const todayStr = days[targetDate.getDay()];
+        return task.frequencyConfig.includes(todayStr);
+      }
+
+      return true;
+    });
+}
+
+export async function addTask(
+  content: string,
+  frequency: "daily" | "weekly" | "biweekly" | "specific_days" = "daily",
+  frequencyConfig?: string[],
+  date?: Date
+): Promise<DailyTask[]> {
+  const userId = await getUserId();
+  
+  const { error } = await supabase.from("user_tasks").insert({
+    user_id: userId,
+    content,
+    frequency,
+    frequency_config: frequencyConfig,
+  });
+  if (error) throw error;
+  
+  return getTasks(date);
+}
+
+export async function toggleTask(taskId: string, isCompleted: boolean, date?: Date): Promise<DailyTask[]> {
+  const key = getDateKey(date);
+  const userId = await getUserId();
+  
+  if (isCompleted) {
+    const { error } = await supabase.from("task_completions").insert({
+      user_id: userId,
+      task_id: taskId,
+      date: key
+    });
+    // Ignore unique constraint violation if they somehow rapidly double-clicked
+    if (error && error.code !== '23505') throw error;
+  } else {
+    const { error } = await supabase
+      .from("task_completions")
+      .delete()
+      .match({ user_id: userId, task_id: taskId, date: key });
+    if (error) throw error;
+  }
+  
+  return getTasks(date);
+}
+
+export async function deleteTask(taskId: string, date?: Date): Promise<DailyTask[]> {
+  const { error } = await supabase.from("user_tasks").delete().match({ id: taskId });
+  if (error) throw error;
+  
+  return getTasks(date);
 }
 
 // --- Targets ---
