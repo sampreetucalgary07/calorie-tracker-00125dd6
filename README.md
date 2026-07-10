@@ -8,7 +8,6 @@ CalTrack is a modern, responsive web application designed for personal use to tr
 - **Gym Calories:** Easily deduct calories burned during workouts.
 - **Streak System:** A visual streak counter that only increments when you successfully hit your daily calorie and deficit targets. Includes a "Last Streak" metric for historical comparison.
 - **Macro Visualization:** A dynamic progress bar that shows your daily protein, carb, and fat intake against customizable targets.
-- **Weekly Schedule:** Built-in workout schedule tailored to specific days of the week.
 - **Monthly Calendar Flow:** A visual history calendar showing days where you successfully hit your goals.
 - **Supabase Integration:** Secure cloud storage for your food library, daily logs, and user profile settings.
 

@@ -157,7 +157,7 @@ export async function getTasks(date?: Date): Promise<DailyTask[]> {
   const userId = await getUserId();
   
   // 1. Fetch all global habits for the user
-  const { data: globalTasks, error: tasksError } = await supabase
+  let { data: globalTasks, error: tasksError } = await supabase
     .from("user_tasks")
     .select("*")
     .eq("user_id", userId)
@@ -166,6 +166,57 @@ export async function getTasks(date?: Date): Promise<DailyTask[]> {
   if (tasksError && tasksError.code === "42P01") return []; // Table doesn't exist yet
   if (tasksError) throw tasksError;
   if (!globalTasks) return [];
+
+  // Seed default daily tasks if they do not match exactly
+  const defaultTargets = [
+    { keys: ["minox", "minod"], content: "1) Minoxidil" },
+    { keys: ["churna"], content: "2) Kayam churna + honey" },
+    { keys: ["dermaroller"], content: "3) Dermaroller" },
+    { keys: ["meditation", "gayatri", "jappa"], content: "4) 5 mins meditation (sandyavandan/gayatri jappa)" },
+    { keys: ["line reading", "reading"], content: "5) 5 mins line reading" },
+    { keys: ["aloevera", "aloe"], content: "6) aloevera gel apply" },
+    { keys: ["multivitamin"], content: "7) Multivitamins" },
+  ];
+
+  const allExactExist = defaultTargets.every(t => 
+    globalTasks.some((gt: any) => gt.content === t.content)
+  );
+
+  if (!allExactExist) {
+    for (const target of defaultTargets) {
+      const existing = globalTasks.find((gt: any) => {
+        const contentLower = gt.content.toLowerCase();
+        return target.keys.some(k => contentLower.includes(k));
+      });
+
+      if (existing) {
+        if (existing.content !== target.content) {
+          await supabase
+            .from("user_tasks")
+            .update({ content: target.content })
+            .eq("id", existing.id);
+        }
+      } else {
+        await supabase
+          .from("user_tasks")
+          .insert({
+            user_id: userId,
+            content: target.content,
+            frequency: "daily"
+          });
+      }
+    }
+
+    // Re-fetch global tasks after seeding/updating
+    const { data: refreshedTasks, error: refreshError } = await supabase
+      .from("user_tasks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+    if (!refreshError && refreshedTasks) {
+      globalTasks = refreshedTasks;
+    }
+  }
 
   // 2. Fetch completions for the specific date
   const { data: completions, error: compError } = await supabase
